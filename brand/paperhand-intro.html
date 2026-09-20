@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Paperhand intro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400..700&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light}
+html,body{height:100%}
+body{margin:0;background:#FAFAF7;color:#0A0A0A;font-family:"Archivo",ui-sans-serif,system-ui,sans-serif;
+  display:grid;place-items:center;-webkit-font-smoothing:antialiased}
+.after{text-align:center;opacity:0;transition:opacity .5s cubic-bezier(.2,.7,.3,1)}
+.after.in{opacity:1}
+.after h1{margin:0;font-size:clamp(26px,4vw,40px);font-weight:700;letter-spacing:-.03em}
+.after p{margin:10px 0 22px;color:#75756E;font-size:15px}
+.after button{border:1px solid #E6E5DF;background:#fff;border-radius:100px;padding:10px 18px;font:inherit;
+  font-size:14px;cursor:pointer;transition:border-color .16s,transform .14s cubic-bezier(.2,.7,.3,1)}
+.after button:hover{border-color:#0A0A0A;transform:translateY(-1px)}
+
+/* ==========================================================================
+   PAPERHAND INTRO
+   Drop this block, its CSS and its script into any page. The overlay removes
+   itself when it is done and only plays once per browser session.
+   ========================================================================== */
+.ph-intro{position:fixed;inset:0;z-index:999;background:#FAFAF7;display:grid;place-items:center;
+  animation:phOut .5s cubic-bezier(.2,.7,.3,1) 2.45s both}
+.ph-intro .ph-stage{position:relative;width:min(360px,86vw);height:230px}
+.ph-intro .ph-stack,.ph-intro .ph-badge,.ph-intro .ph-word{position:absolute;left:50%;top:50%}
+.ph-intro .ph-stack{width:150px;transform:translate(-50%,-50%);animation:phStackOut .5s cubic-bezier(.2,.7,.3,1) 1.05s both}
+.ph-intro .ph-stack g{opacity:0;animation:phDrop .6s cubic-bezier(.2,.7,.3,1) both}
+.ph-intro .ph-stack g:nth-child(1){animation-delay:.10s}
+.ph-intro .ph-stack g:nth-child(2){animation-delay:.24s}
+.ph-intro .ph-stack g:nth-child(3){animation-delay:.38s}
+.ph-intro .ph-stack g:nth-child(4){animation-delay:.52s}
+.ph-intro .ph-badge{width:96px;opacity:0;animation:phBadge .7s cubic-bezier(.2,.7,.3,1) 1.15s both}
+.ph-intro .ph-rise{transform:translateY(46px);animation:phRise .8s cubic-bezier(.2,.7,.3,1) 1.45s both}
+.ph-intro .ph-word{transform:translate(-50%,44px);font-size:clamp(28px,7vw,36px);font-weight:700;letter-spacing:-.035em;
+  white-space:nowrap;clip-path:inset(0 100% 0 0);animation:phWipe .6s cubic-bezier(.2,.7,.3,1) 1.75s both}
+@keyframes phDrop{from{opacity:0;transform:translateY(-38px)}to{opacity:1;transform:translateY(0)}}
+@keyframes phStackOut{to{opacity:0;transform:translate(-50%,-50%) scale(.86)}}
+@keyframes phBadge{from{opacity:0;transform:translate(-50%,-50%) scale(.8)}
+  to{opacity:1;transform:translate(-50%,calc(-50% - 24px)) scale(1)}}
+@keyframes phRise{from{transform:translateY(46px)}to{transform:translateY(0)}}
+@keyframes phWipe{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+@keyframes phOut{to{opacity:0;visibility:hidden}}
+@media (prefers-reduced-motion:reduce){.ph-intro{display:none}}
+</style>
+</head>
+<body>
+
+<div class="after" id="after">
+  <h1>That is the intro.</h1>
+  <p>It plays once per session, then removes itself from the page.</p>
+  <button id="replay">Play again</button>
+</div>
+
+<!-- PAPERHAND INTRO markup -->
+<div class="ph-intro" id="ph-intro" aria-hidden="true">
+  <div class="ph-stage">
+    <svg class="ph-stack" viewBox="0 0 160 150"></svg>
+    <svg class="ph-badge" viewBox="0 0 100 100">
+      <defs><clipPath id="phsq" clipPathUnits="objectBoundingBox">
+        <path d="M0.26,0 H0.74 C0.9,0 1,0.1 1,0.26 V0.74 C1,0.9 0.9,1 0.74,1 H0.26 C0.1,1 0,0.9 0,0.74 V0.26 C0,0.1 0.1,0 0.26,0 Z"/>
+      </clipPath></defs>
+      <g clip-path="url(#phsq)">
+        <rect width="100" height="100" fill="#0A0A0A"/>
+        <g class="ph-rise">
+          <path d="M0 64 L50 52 L100 64 V100 H0 Z" fill="#116B4D"/>
+          <path d="M0 64 L50 52 L100 64 L100 68 L50 56 L0 68 Z" fill="#2E8C66"/>
+        </g>
+      </g>
+    </svg>
+    <div class="ph-word">paperhand</div>
+  </div>
+</div>
+
+<script>
+/* PAPERHAND INTRO script */
+(function(){
+  const el = document.getElementById("ph-intro");
+  if (!el) return;
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let seen = false;
+  try { seen = sessionStorage.getItem("ph-intro") === "1"; } catch {}
+
+  function plates(){
+    const out = [];
+    for (let i = 0; i < 4; i++){
+      const on = i < 2;
+      const w = 44, hh = w / 2, thick = 7, x = 80, y = 120 - i * 22;
+      const c = on ? ["#2E8C66","#176B4C","#0E4E37"] : ["#F0EFEA","#E3E2DB","#D6D5CD"];
+      out.push("<g>" +
+        '<polygon points="' + [x-w,y,x,y+hh,x,y+hh+thick,x-w,y+thick].join(" ") + '" fill="' + c[1] + '"/>' +
+        '<polygon points="' + [x+w,y,x,y+hh,x,y+hh+thick,x+w,y+thick].join(" ") + '" fill="' + c[2] + '"/>' +
+        '<polygon points="' + [x,y-hh,x+w,y,x,y+hh,x-w,y].join(" ") + '" fill="' + c[0] + '"/>' +
+        "</g>");
+    }
+    return out.join("");
+  }
+
+  function run(node){
+    node.querySelector(".ph-stack").innerHTML = plates();
+    setTimeout(() => { node.remove(); done(); }, 3000);
+  }
+
+  if (seen || reduce){ el.remove(); done(); }
+  else { try { sessionStorage.setItem("ph-intro", "1"); } catch {} run(el); }
+
+  function done(){ const a = document.getElementById("after"); if (a) a.classList.add("in"); }
+
+  /* demo only: the replay button is not part of the snippet */
+  const btn = document.getElementById("replay");
+  if (btn) btn.onclick = () => {
+    const fresh = document.createElement("div");
+    fresh.className = "ph-intro";
+    fresh.id = "ph-intro";
+    fresh.innerHTML = TEMPLATE;
+    document.body.appendChild(fresh);
+    document.getElementById("after").classList.remove("in");
+    run(fresh);
+  };
+
+  const TEMPLATE = `<div class="ph-stage">
+    <svg class="ph-stack" viewBox="0 0 160 150"></svg>
+    <svg class="ph-badge" viewBox="0 0 100 100">
+      <defs><clipPath id="phsq" clipPathUnits="objectBoundingBox">
+        <path d="M0.26,0 H0.74 C0.9,0 1,0.1 1,0.26 V0.74 C1,0.9 0.9,1 0.74,1 H0.26 C0.1,1 0,0.9 0,0.74 V0.26 C0,0.1 0.1,0 0.26,0 Z"/>
+      </clipPath></defs>
+      <g clip-path="url(#phsq)">
+        <rect width="100" height="100" fill="#0A0A0A"/>
+        <g class="ph-rise">
+          <path d="M0 64 L50 52 L100 64 V100 H0 Z" fill="#116B4D"/>
+          <path d="M0 64 L50 52 L100 64 L100 68 L50 56 L0 68 Z" fill="#2E8C66"/>
+        </g>
+      </g>
+    </svg>
+    <div class="ph-word">paperhand</div>
+  </div>`;
+})();
+</script>
+</body>
+</html>

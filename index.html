@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Paperhand</title>
+<meta name="description" content="Lock your tokens behind a price range. They unlock as it climbs. Non-custodial, on Robinhood Chain." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400..700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+:root{
+  --paper:#FAFAF7;
+  --panel:#FFFFFF;
+  --ink:#0A0A0A;
+  --muted:#75756E;
+  --rule:#E6E5DF;
+  --soft:#F2F1EC;
+  --free:#116B4D;
+  --ease:cubic-bezier(.2,.7,.3,1);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;scroll-padding-top:90px}
+body{
+  margin:0;background:var(--paper);color:var(--ink);overflow-x:hidden;
+  font-family:"Archivo",ui-sans-serif,system-ui,sans-serif;
+  font-variant-numeric:tabular-nums;font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;
+  padding-top:env(safe-area-inset-top,0px);
+}
+html[lang^="zh"] body{font-family:"Archivo","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",ui-sans-serif,sans-serif;line-height:1.8}
+html[lang^="zh"] h1,html[lang^="zh"] h2{letter-spacing:0}
+h1,h2,h3{margin:0;font-weight:700;letter-spacing:-.03em;line-height:1.06}
+h1{font-size:clamp(34px,6.4vw,68px)}
+h2{font-size:clamp(20px,2.4vw,26px)}
+h3{font-size:16px;letter-spacing:-.01em}
+p{margin:0}
+a{color:inherit;text-decoration:none}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+:focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:4px}
+.wrap{width:100%;max-width:1120px;margin:0 auto;padding:0 clamp(18px,4vw,28px)}
+
+/* ----------------------------------------------------------------- intro */
+.ph-intro{position:fixed;inset:0;z-index:999;background:var(--paper);display:grid;place-items:center;
+  animation:phOut .5s var(--ease) 2.45s both}
+.ph-intro .ph-stage{position:relative;width:min(360px,86vw);height:230px}
+.ph-intro .ph-stack,.ph-intro .ph-badge,.ph-intro .ph-word{position:absolute;left:50%;top:50%}
+.ph-intro .ph-stack{width:150px;transform:translate(-50%,-50%);animation:phStackOut .5s var(--ease) 1.05s both}
+.ph-intro .ph-stack g{opacity:0;animation:phDrop .6s var(--ease) both}
+.ph-intro .ph-stack g:nth-child(1){animation-delay:.10s}
+.ph-intro .ph-stack g:nth-child(2){animation-delay:.24s}
+.ph-intro .ph-stack g:nth-child(3){animation-delay:.38s}
+.ph-intro .ph-stack g:nth-child(4){animation-delay:.52s}
+.ph-intro .ph-badge{width:96px;opacity:0;animation:phBadge .7s var(--ease) 1.15s both}
+.ph-intro .ph-rise{transform:translateY(46px);animation:phRise .8s var(--ease) 1.45s both}
+.ph-intro .ph-word{transform:translate(-50%,44px);font-size:clamp(28px,7vw,36px);font-weight:700;letter-spacing:-.035em;
+  white-space:nowrap;clip-path:inset(0 100% 0 0);animation:phWipe .6s var(--ease) 1.75s both}
+@keyframes phDrop{from{opacity:0;transform:translateY(-38px)}to{opacity:1;transform:translateY(0)}}
+@keyframes phStackOut{to{opacity:0;transform:translate(-50%,-50%) scale(.86)}}
+@keyframes phBadge{from{opacity:0;transform:translate(-50%,-50%) scale(.8)}
+  to{opacity:1;transform:translate(-50%,calc(-50% - 24px)) scale(1)}}
+@keyframes phRise{from{transform:translateY(46px)}to{transform:translateY(0)}}
+@keyframes phWipe{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+@keyframes phOut{to{opacity:0;visibility:hidden}}
+
+/* ------------------------------------------------------------------ orbs */
+.orbs{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.orb{position:absolute;border-radius:50%;filter:blur(70px);opacity:.5}
+.o1{width:420px;height:420px;background:#C3DACD;left:-8%;top:4%;animation:d1 48s ease-in-out infinite}
+.o2{width:340px;height:340px;background:#E8E1D0;right:-6%;top:0;animation:d2 60s ease-in-out infinite}
+.o3{width:300px;height:300px;background:#DCE5DE;right:10%;top:52%;animation:d3 54s ease-in-out infinite}
+@keyframes d1{50%{transform:translate3d(70px,50px,0) scale(1.14)}}
+@keyframes d2{50%{transform:translate3d(-60px,60px,0) scale(1.08)}}
+@keyframes d3{50%{transform:translate3d(-50px,-40px,0) scale(1.16)}}
+
+/* ------------------------------------------------------------------- nav */
+nav{position:sticky;top:0;z-index:30;background:rgba(250,250,247,.78);backdrop-filter:blur(14px);border-bottom:1px solid var(--rule)}
+.bar{display:flex;align-items:center;gap:12px;height:66px}
+.logo{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:-.03em;font-size:18px}
+.glyph{width:18px;height:18px;display:block;flex:none;overflow:visible}
+.glyph .fill{transition:transform .55s var(--ease)}
+.logo:hover .glyph .fill{transform:translateY(-16px)}
+.bar .grow{flex:1}
+.chip{font-size:12.5px;color:var(--muted);border:1px solid var(--rule);border-radius:100px;padding:5px 11px;background:var(--panel);white-space:nowrap}
+.lang{display:inline-flex;border:1px solid var(--rule);border-radius:100px;background:var(--panel);overflow:hidden}
+.lang button{padding:6px 11px;font-size:13px;color:var(--muted);line-height:1.2;transition:background .16s,color .16s}
+.lang button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.cta{position:relative;display:inline-block;background:var(--ink);color:var(--paper);border-radius:100px;
+  padding:10px 18px;font-size:14.5px;font-weight:600;overflow:hidden;
+  transition:transform .16s var(--ease),box-shadow .22s var(--ease),opacity .16s,border-color .16s}
+.cta:hover{transform:translateY(-1px);box-shadow:0 10px 24px -12px rgba(10,10,10,.6)}
+.cta:active{transform:translateY(0) scale(.98);box-shadow:none}
+.cta.light{background:var(--panel);color:var(--ink);border:1px solid var(--rule)}
+.cta.light:hover{border-color:var(--ink)}
+.cta.lg{padding:14px 26px;font-size:16px}
+.cta.soon{opacity:.45;pointer-events:none}
+
+/* ------------------------------------------------------------------ hero */
+main{position:relative;z-index:1}
+.hero{text-align:center;padding:clamp(48px,7vw,86px) 0 clamp(20px,3vw,32px);display:flex;flex-direction:column;align-items:center}
+.hero h1{max-width:16ch}
+.hero .lede{margin-top:18px;color:var(--muted);font-size:clamp(16px,1.8vw,19px);max-width:44ch}
+.hero .row{display:flex;gap:10px;margin-top:30px;flex-wrap:wrap;justify-content:center}
+
+/* ----------------------------------------------------------------- stage */
+.stage{width:100%;max-width:620px;margin:clamp(6px,2vw,22px) auto 0;position:relative}
+#scene{width:100%;height:clamp(300px,42vh,420px);display:block;cursor:grab;touch-action:pan-y}
+#scene:active{cursor:grabbing}
+.readout{display:flex;align-items:baseline;justify-content:center;gap:10px;margin-top:6px}
+.readout .price{font-size:26px;font-weight:700;letter-spacing:-.02em}
+.readout .pct{font-size:14px;color:var(--free);font-weight:600}
+.slider{margin:14px auto 0;max-width:420px;padding:0 4px}
+.slider input{width:100%;-webkit-appearance:none;appearance:none;background:none;height:26px;cursor:ew-resize}
+.slider input::-webkit-slider-runnable-track{height:6px;border-radius:99px;
+  background:linear-gradient(90deg,var(--free) var(--fill,0%),var(--soft) var(--fill,0%))}
+.slider input::-moz-range-track{height:6px;border-radius:99px;background:var(--soft)}
+.slider input::-moz-range-progress{height:6px;border-radius:99px;background:var(--free)}
+.slider input::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--panel);
+  border:1.5px solid var(--ink);margin-top:-7px;box-shadow:0 2px 6px rgba(10,10,10,.18);transition:transform .14s var(--ease)}
+.slider input::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--panel);border:1.5px solid var(--ink)}
+.slider input:active::-webkit-slider-thumb{transform:scale(1.15)}
+.ends{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);margin-top:2px}
+.caption{text-align:center;font-size:13px;color:var(--muted);margin-top:14px}
+
+/* --------------------------------------------------------------- content */
+section{padding:clamp(64px,8vw,120px) 0 0}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(14px,2vw,22px)}
+.step{background:var(--panel);border:1px solid var(--rule);border-radius:18px;padding:24px;
+  transition:transform .22s var(--ease),box-shadow .26s var(--ease),border-color .2s}
+.step:hover{transform:translateY(-4px);border-color:#D8D7CF;box-shadow:0 22px 40px -30px rgba(10,10,10,.5)}
+.step .n{width:26px;height:26px;border-radius:9px;background:var(--soft);color:var(--muted);
+  display:grid;place-items:center;font-size:13px;font-weight:600;margin-bottom:14px}
+.step p{margin-top:6px;color:var(--muted);font-size:14.5px}
+.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--rule);
+  border:1px solid var(--rule);border-radius:18px;overflow:hidden;margin-top:clamp(14px,2vw,22px)}
+.fact{background:var(--panel);padding:20px 22px;transition:background .2s}
+.fact:hover{background:var(--soft)}
+.fact b{display:block;font-size:15px;font-weight:600}
+.fact span{font-size:13.5px;color:var(--muted)}
+.loop{margin-top:clamp(14px,2vw,22px);background:var(--panel);border:1px solid var(--rule);border-radius:18px;
+  padding:clamp(22px,3vw,32px);display:grid;grid-template-columns:auto 1fr;gap:clamp(22px,4vw,48px);align-items:center}
+.loop .big{text-align:center;flex:none}
+.loop .big b{display:block;font-size:clamp(52px,8vw,88px);font-weight:700;letter-spacing:-.05em;line-height:.9;color:var(--free)}
+.loop .big span{display:block;font-size:13px;color:var(--muted);margin-top:10px;max-width:16ch}
+.loop .side h2{margin-bottom:18px;max-width:22ch}
+.flow-wrap{position:relative}
+.flow{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:0;position:relative}
+.flow::before{content:"";position:absolute;left:6px;right:6px;top:7px;height:2px;background:var(--soft);border-radius:2px}
+.flow .pulse{position:absolute;top:3px;left:0;width:10px;height:10px;border-radius:50%;background:var(--free);
+  opacity:.9;animation:travel 4.2s var(--ease) infinite}
+@keyframes travel{0%{left:2%;opacity:0}12%{opacity:1}88%{opacity:1}100%{left:96%;opacity:0}}
+.flow li{position:relative;padding:26px 14px 0 0;font-size:14.5px;color:var(--muted)}
+.flow li::before{content:"";position:absolute;top:2px;left:0;width:12px;height:12px;border-radius:50%;
+  background:var(--panel);border:2px solid var(--rule)}
+.flow li:last-child::before{border-color:var(--free)}
+.flow li b{color:var(--ink);font-weight:600}
+.closing{text-align:center;padding:clamp(80px,10vw,140px) 0 clamp(70px,8vw,110px)}
+.closing h2{max-width:20ch;margin:0 auto}
+.closing .row{display:flex;gap:10px;justify-content:center;margin-top:26px;flex-wrap:wrap}
+
+footer{border-top:1px solid var(--rule);padding:26px 0 40px;font-size:13.5px;color:var(--muted);position:relative;z-index:1}
+.foot{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.foot .grow{flex:1}
+.foot a{transition:color .16s}
+.foot a:hover{color:var(--ink)}
+.foot a.soon{opacity:.45;pointer-events:none}
+
+/* --------------------------------------------------------------- reveals */
+.reveal{opacity:0;transform:translateY(14px);transition:opacity .6s var(--ease),transform .6s var(--ease)}
+.reveal.in{opacity:1;transform:none}
+.reveal.d1{transition-delay:.06s}.reveal.d2{transition-delay:.12s}.reveal.d3{transition-delay:.18s}
+
+@media (max-width:900px){
+  .steps{grid-template-columns:1fr}
+  .facts{grid-template-columns:repeat(2,1fr)}
+  .loop{grid-template-columns:1fr;gap:24px;text-align:center}
+  .loop .big span{margin-left:auto;margin-right:auto}
+  .loop .side h2{margin-left:auto;margin-right:auto}
+  .flow-wrap{max-width:420px;margin:0 auto}
+  .flow{grid-template-columns:1fr;gap:14px;text-align:left}
+  .flow::before{left:5px;right:auto;top:6px;bottom:6px;width:2px;height:auto}
+  .flow .pulse{animation:travelY 4.2s var(--ease) infinite;left:0}
+  @keyframes travelY{0%{top:0;opacity:0}12%{opacity:1}88%{opacity:1}100%{top:92%;opacity:0}}
+  .flow li{padding:0 0 0 26px}
+  .flow li::before{top:4px}
+}
+@media (max-width:620px){
+  .bar{gap:8px}
+  .chip{display:none}
+  .hero .row{width:100%}
+  .hero .row .cta{flex:1;text-align:center}
+  .facts{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important}
+  .reveal{opacity:1;transform:none}
+  html{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+
+<div class="ph-intro" id="ph-intro" aria-hidden="true">
+  <div class="ph-stage">
+    <svg class="ph-stack" viewBox="0 0 160 150"></svg>
+    <svg class="ph-badge" viewBox="0 0 100 100">
+      <defs><clipPath id="sq2" clipPathUnits="objectBoundingBox">
+        <path d="M0.26,0 H0.74 C0.9,0 1,0.1 1,0.26 V0.74 C1,0.9 0.9,1 0.74,1 H0.26 C0.1,1 0,0.9 0,0.74 V0.26 C0,0.1 0.1,0 0.26,0 Z"/>
+      </clipPath></defs>
+      <g clip-path="url(#sq2)">
+        <rect width="100" height="100" fill="#0A0A0A"/>
+        <g class="ph-rise">
+          <path d="M0 64 L50 52 L100 64 V100 H0 Z" fill="#116B4D"/>
+          <path d="M0 64 L50 52 L100 64 L100 68 L50 56 L0 68 Z" fill="#2E8C66"/>
+        </g>
+      </g>
+    </svg>
+    <div class="ph-word">paperhand</div>
+  </div>
+</div>
+
+<div class="orbs" aria-hidden="true">
+  <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
+</div>
+
+<nav>
+  <div class="wrap bar">
+    <a class="logo" href="#top"><svg class="glyph" viewBox="0 0 100 100" aria-hidden="true">
+        <defs><clipPath id="sq" clipPathUnits="objectBoundingBox">
+          <path d="M0.26,0 H0.74 C0.9,0 1,0.1 1,0.26 V0.74 C1,0.9 0.9,1 0.74,1 H0.26 C0.1,1 0,0.9 0,0.74 V0.26 C0,0.1 0.1,0 0.26,0 Z"/>
+        </clipPath></defs>
+        <g clip-path="url(#sq)">
+          <rect width="100" height="100" fill="#0A0A0A"/>
+          <g class="fill">
+            <path d="M0 64 L50 52 L100 64 V100 H0 Z" fill="#116B4D"/>
+            <path d="M0 64 L50 52 L100 64 L100 68 L50 56 L0 68 Z" fill="#2E8C66"/>
+          </g>
+        </g>
+      </svg>paperhand</a>
+    <div class="grow"></div>
+    <span class="chip" data-t="nav.status"></span>
+    <div class="lang" id="lang">
+      <button data-lang="en" aria-pressed="true">EN</button>
+      <button data-lang="zh" aria-pressed="false">中文</button>
+    </div>
+    <a class="cta" data-link="app" data-t="nav.app"></a>
+  </div>
+</nav>
+
+<main id="top">
+  <div class="wrap hero">
+    <h1 data-t="hero.h1"></h1>
+    <p class="lede" data-t="hero.lede"></p>
+    <div class="row">
+      <a class="cta lg" data-link="app" data-t="hero.cta1"></a>
+      <a class="cta lg light" href="#how" data-t="hero.cta2"></a>
+    </div>
+
+    <div class="stage">
+      <canvas id="scene"></canvas>
+      <div class="readout">
+        <span class="price" id="price"></span>
+        <span class="pct" id="pct"></span>
+      </div>
+      <div class="slider">
+        <input type="range" id="range" min="0" max="100" value="18" aria-label="price" />
+        <div class="ends"><span>$200</span><span>$320</span></div>
+      </div>
+      <p class="caption" data-t="hero.caption"></p>
+    </div>
+  </div>
+
+  <section id="how" class="wrap">
+    <div class="steps">
+      <div class="step reveal"><div class="n">1</div><h3 data-t="how.1h"></h3><p data-t="how.1p"></p></div>
+      <div class="step reveal d1"><div class="n">2</div><h3 data-t="how.2h"></h3><p data-t="how.2p"></p></div>
+      <div class="step reveal d2"><div class="n">3</div><h3 data-t="how.3h"></h3><p data-t="how.3p"></p></div>
+    </div>
+
+    <div class="facts reveal">
+      <div class="fact"><b data-t="fact.1b"></b><span data-t="fact.1s"></span></div>
+      <div class="fact"><b data-t="fact.2b"></b><span data-t="fact.2s"></span></div>
+      <div class="fact"><b data-t="fact.3b"></b><span data-t="fact.3s"></span></div>
+      <div class="fact"><b data-t="fact.4b"></b><span data-t="fact.4s"></span></div>
+    </div>
+  </section>
+
+  <section id="buyback" class="wrap">
+    <div class="loop reveal">
+      <div class="big"><b>30%</b><span data-t="buy.big"></span></div>
+      <div class="side">
+        <h2 data-t="buy.h"></h2>
+        <div class="flow-wrap">
+          <span class="pulse" aria-hidden="true"></span>
+          <ol class="flow">
+            <li data-t="buy.1"></li>
+            <li data-t="buy.2"></li>
+            <li data-t="buy.3"></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap closing reveal">
+    <h2 data-t="close.h"></h2>
+    <div class="row">
+      <a class="cta lg" data-link="app" data-t="close.cta"></a>
+      <a class="cta lg light" data-link="docs" data-t="close.docs"></a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <span data-t="footer.left"></span>
+    <span class="grow"></span>
+    <a data-link="app" data-t="footer.app"></a>
+    <a data-link="contract" data-t="footer.contract"></a>
+    <a data-link="github">GitHub</a>
+    <a data-link="x">X</a>
+    <a data-link="telegram">Telegram</a>
+  </div>
+</footer>
+
+<script>
+/* Fill these in when they exist. Anything left empty renders dimmed and is
+   not clickable, so no button ever leads nowhere. */
+const LINKS = {
+  app: "https://lock.paperhand.trade",
+  docs: "",
+  contract: "",
+  github: "",
+  x: "",
+  telegram: ""
+};
+function applyLinks(){
+  document.querySelectorAll("[data-link]").forEach(a => {
+    const url = LINKS[a.dataset.link];
+    if (url){
+      a.href = url;
+      a.classList.remove("soon");
+      if (/^https?:/.test(url)){ a.target = "_blank"; a.rel = "noopener"; }
+    } else {
+      a.removeAttribute("href");
+      a.classList.add("soon");
+    }
+  });
+}
+
+const I18N = {
+en: {
+  "nav.status":"Pre-launch", "nav.app":"Open app",
+  "hero.h1":"Sell when the price says so.",
+  "hero.lede":"Lock your tokens behind a price range. They come back as it climbs.",
+  "hero.cta1":"Open app", "hero.cta2":"How it works",
+  "hero.caption":"Drag the price. Turn the vault.",
+  "hero.released":"{p}% released",
+  "how.1h":"Set a range", "how.1p":"Pick where unlocking starts and where it finishes.",
+  "how.2h":"The price does the work", "how.2p":"Every move up through the range frees another slice.",
+  "how.3h":"Claim when you want", "how.3p":"A spike that falls back stays banked.",
+  "fact.1b":"Non-custodial", "fact.1s":"No admin key touches a deposit",
+  "fact.2b":"Chainlink prices", "fact.2s":"The feeds the chain runs on",
+  "fact.3b":"30% to leave early", "fact.3s":"Every cut buys back $PAPERHAND",
+  "fact.4b":"1 PAPERHAND", "fact.4s":"Burned to open a vault",
+  "buy.big":"of whatever is still locked",
+  "buy.h":"Paper hands buy the token.",
+  "buy.1":"Someone closes a vault before the range is done",
+  "buy.2":"30% of the locked part stays in the treasury",
+  "buy.3":"The treasury buys $PAPERHAND on the market",
+  "close.h":"Your exit plan, written down before you need it.",
+  "close.cta":"Open app", "close.docs":"Docs",
+  "footer.left":"Paperhand on Robinhood Chain. Pre-launch, contracts are not deployed yet.",
+  "footer.app":"App", "footer.contract":"Contract"
+},
+zh: {
+  "nav.status":"尚未上线", "nav.app":"打开应用",
+  "hero.h1":"让价格决定你什么时候卖。",
+  "hero.lede":"把代币锁进一个价格区间，随着价格上涨逐步回到你手里。",
+  "hero.cta1":"打开应用", "hero.cta2":"运作方式",
+  "hero.caption":"拖动价格，也可以转动金库。",
+  "hero.released":"已释放 {p}%",
+  "how.1h":"设定区间", "how.1p":"选好开始解锁和全部解锁的价格。",
+  "how.2h":"交给价格", "how.2p":"价格每向上走一段，就释放一部分。",
+  "how.3h":"随时领取", "how.3p":"冲高后回落，已释放的部分依然算数。",
+  "fact.1b":"非托管", "fact.1s":"没有管理员密钥能碰你的存款",
+  "fact.2b":"Chainlink 价格", "fact.2s":"与整条链同一套预言机",
+  "fact.3b":"提前退出扣 30%", "fact.3s":"罚金全部用于回购 $PAPERHAND",
+  "fact.4b":"1 枚 PAPERHAND", "fact.4s":"开仓时销毁",
+  "buy.big":"仍被锁定的部分",
+  "buy.h":"纸手在为代币买单。",
+  "buy.1":"有人在区间走完前关闭金库",
+  "buy.2":"锁定部分的 30% 留在协议金库",
+  "buy.3":"金库在市场上回购 $PAPERHAND",
+  "close.h":"在你需要之前，先把退出计划写下来。",
+  "close.cta":"打开应用", "close.docs":"文档",
+  "footer.left":"Paperhand，运行在 Robinhood Chain 上。尚未上线，合约还未部署。",
+  "footer.app":"应用", "footer.contract":"合约"
+}
+};
+let lang = localStorage.getItem("ph-lang") || ((navigator.language || "").toLowerCase().startsWith("zh") ? "zh" : "en");
+const t = (k, vars) => {
+  let s = (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k;
+  if (vars) for (const [key, val] of Object.entries(vars)) s = s.split("{" + key + "}").join(val);
+  return s;
+};
+function applyLang(){
+  document.documentElement.lang = lang === "zh" ? "zh-Hans" : "en";
+  document.querySelectorAll("[data-t]").forEach(el => el.textContent = t(el.dataset.t));
+  document.querySelectorAll("#lang button").forEach(b => b.setAttribute("aria-pressed", b.dataset.lang === lang));
+  if (window.drawReadout) window.drawReadout();
+}
+document.getElementById("lang").addEventListener("click", e => {
+  const b = e.target.closest("[data-lang]"); if (!b) return;
+  lang = b.dataset.lang; localStorage.setItem("ph-lang", lang); applyLang();
+});
+applyLang();
+applyLinks();
+
+/* --------------------------------------------------------------- intro */
+(function(){
+  const el = document.getElementById("ph-intro");
+  if (!el) return;
+  let seen = false;
+  try { seen = sessionStorage.getItem("ph-intro") === "1"; } catch {}
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (seen || reduce){ el.remove(); return; }
+  try { sessionStorage.setItem("ph-intro", "1"); } catch {}
+  document.documentElement.style.overflow = "hidden";
+
+  let out = "";
+  for (let i = 0; i < 4; i++){
+    const w = 44, hh = w / 2, th = 7, x = 80, y = 120 - i * 22;
+    const c = i < 2 ? ["#2E8C66","#176B4C","#0E4E37"] : ["#F0EFEA","#E3E2DB","#D6D5CD"];
+    out += "<g>" +
+      '<polygon points="' + [x-w,y,x,y+hh,x,y+hh+th,x-w,y+th].join(" ") + '" fill="' + c[1] + '"/>' +
+      '<polygon points="' + [x+w,y,x,y+hh,x,y+hh+th,x+w,y+th].join(" ") + '" fill="' + c[2] + '"/>' +
+      '<polygon points="' + [x,y-hh,x+w,y,x,y+hh,x-w,y].join(" ") + '" fill="' + c[0] + '"/>' + "</g>";
+  }
+  el.querySelector(".ph-stack").innerHTML = out;
+  setTimeout(() => { el.remove(); document.documentElement.style.overflow = ""; }, 3000);
+})();
+
+/* ------------------------------------------------------------- reveals */
+if ("IntersectionObserver" in window){
+  const io = new IntersectionObserver(es => es.forEach(e => {
+    if (e.isIntersecting){ e.target.classList.add("in"); io.unobserve(e.target); }
+  }), { rootMargin: "0px 0px -12% 0px" });
+  document.querySelectorAll(".reveal").forEach(el => io.observe(el));
+} else {
+  document.querySelectorAll(".reveal").forEach(el => el.classList.add("in"));
+}
+
+/* ------------------------------------------------------------ the vault
+   A stack of bevelled plates. Released plates take the brand green, locked
+   ones stay pale. Drag to turn it, drag the slider to move the price.     */
+(function(){
+  const canvas = document.getElementById("scene");
+  const slider = document.getElementById("range");
+  const LOW = 200, HIGH = 320, PLATES = 12;
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function readout(){
+    const v = Number(slider.value) / 100;
+    const price = LOW + v * (HIGH - LOW);
+    const pct = Math.round(v * 100);
+    document.getElementById("price").textContent =
+      "$" + price.toLocaleString(lang === "zh" ? "zh-CN" : "en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById("pct").textContent = t("hero.released", { p: pct });
+    slider.style.setProperty("--fill", pct + "%");
+  }
+  window.drawReadout = readout;
+  slider.addEventListener("input", readout);
+  readout();
+
+  if (!window.THREE) return;
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+  camera.position.set(0, 2.6, 9.4);
+  camera.lookAt(0, 0.1, 0);
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setClearColor(0x000000, 0);
+  renderer.outputEncoding = THREE.sRGBEncoding;
+
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xDCD9CE, 0.85));
+  const key = new THREE.DirectionalLight(0xffffff, 0.75); key.position.set(5, 9, 6); scene.add(key);
+  const rim = new THREE.DirectionalLight(0xC9D6CF, 0.35); rim.position.set(-6, 3, -5); scene.add(rim);
+
+  // a soft contact shadow, cheaper and calmer than a real shadow map
+  const shadow = new THREE.Mesh(
+    new THREE.CircleGeometry(2.1, 48),
+    new THREE.MeshBasicMaterial({ color: 0x0A0A0A, transparent: true, opacity: 0.07 })
+  );
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.position.y = -2.15;
+  scene.add(shadow);
+
+  function plateShape(w, d, r){
+    const s = new THREE.Shape();
+    s.moveTo(-w + r, -d);
+    s.lineTo(w - r, -d);
+    s.absarc(w - r, -d + r, r, -Math.PI / 2, 0, false);
+    s.lineTo(w, d - r);
+    s.absarc(w - r, d - r, r, 0, Math.PI / 2, false);
+    s.lineTo(-w + r, d);
+    s.absarc(-w + r, d - r, r, Math.PI / 2, Math.PI, false);
+    s.lineTo(-w, -d + r);
+    s.absarc(-w + r, -d + r, r, Math.PI, Math.PI * 1.5, false);
+    return s;
+  }
+  const geo = new THREE.ExtrudeGeometry(plateShape(1.5, 1.5, 0.32), {
+    depth: 0.2, bevelEnabled: true, bevelSize: 0.06, bevelThickness: 0.05, bevelSegments: 2, curveSegments: 8
+  });
+  geo.rotateX(-Math.PI / 2);
+  geo.center();
+
+  const FREE = new THREE.Color(0x14764F);
+  const LOCK = new THREE.Color(0xE9E8E2);
+  const group = new THREE.Group();
+  scene.add(group);
+
+  const plates = [];
+  const GAP = 0.36;
+  for (let i = 0; i < PLATES; i++){
+    const mat = new THREE.MeshStandardMaterial({ color: LOCK.clone(), roughness: 0.42, metalness: 0.04 });
+    const m = new THREE.Mesh(geo, mat);
+    const s = 1 - i * 0.016;
+    m.scale.set(s, 1, s);
+    m.position.y = i * GAP - (PLATES - 1) * GAP / 2;
+    m.userData.baseY = m.position.y;
+    m.userData.target = 0;
+    m.userData.level = 0;
+    group.add(m);
+    plates.push(m);
+  }
+
+  function resize(){
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    if (!w || !h) return;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.fov = w < 520 ? 36 : 30;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  /* drag to turn */
+  let spin = -0.5, spinTarget = -0.5, pitch = 0, pitchTarget = 0;
+  let dragging = false, lastX = 0, lastY = 0, idle = 0;
+  canvas.addEventListener("pointerdown", e => {
+    dragging = true; idle = 0; lastX = e.clientX; lastY = e.clientY;
+    canvas.setPointerCapture(e.pointerId);
+  });
+  canvas.addEventListener("pointermove", e => {
+    if (!dragging) return;
+    spinTarget += (e.clientX - lastX) * 0.008;
+    pitchTarget = Math.max(-0.35, Math.min(0.5, pitchTarget + (e.clientY - lastY) * 0.004));
+    lastX = e.clientX; lastY = e.clientY;
+  });
+  const stop = e => { dragging = false; try { canvas.releasePointerCapture(e.pointerId); } catch {} };
+  canvas.addEventListener("pointerup", stop);
+  canvas.addEventListener("pointercancel", stop);
+
+  let visible = true;
+  if ("IntersectionObserver" in window){
+    new IntersectionObserver(es => { visible = es[0].isIntersecting; }).observe(canvas);
+  }
+
+  const start = performance.now();
+  const easeOut = x => 1 - Math.pow(1 - x, 3);
+
+  function frame(now){
+    requestAnimationFrame(frame);
+    if (!visible || document.hidden) return;
+
+    const el = (now - start) / 1000;
+    const intro = Math.min(1, Math.max(0, (el - 0.15) / 1.1));
+    const filled = (Number(slider.value) / 100) * PLATES;
+
+    plates.forEach((m, i) => {
+      // entrance: plates drop into place one after the other
+      const inn = reduce ? 1 : easeOut(Math.min(1, Math.max(0, (intro * PLATES - i * 0.55) / 1.6)));
+      m.position.y = m.userData.baseY + (1 - inn) * 2.4;
+      m.material.opacity = inn;
+      m.material.transparent = inn < 1;
+
+      const want = Math.max(0, Math.min(1, filled - i));
+      m.userData.level += (want - m.userData.level) * 0.14;
+      m.material.color.copy(LOCK).lerp(FREE, m.userData.level);
+      // released plates sit a hair proud of the stack
+      m.position.y += m.userData.level * 0.045;
+    });
+
+    if (!dragging){
+      idle += 1 / 60;
+      if (idle > 1.6 && !reduce) spinTarget += 0.0022;
+    }
+    spin += (spinTarget - spin) * 0.08;
+    pitch += (pitchTarget - pitch) * 0.08;
+    group.rotation.y = spin;
+    group.rotation.x = pitch;
+    if (!reduce) group.position.y = Math.sin(el * 0.55) * 0.055;
+
+    renderer.render(scene, camera);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
